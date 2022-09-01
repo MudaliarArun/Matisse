@@ -19,12 +19,13 @@ package com.zhihu.matisse;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Build;
+
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.StyleRes;
-import androidx.fragment.app.Fragment;
 
 import com.zhihu.matisse.engine.ImageEngine;
 import com.zhihu.matisse.filter.Filter;
@@ -32,7 +33,6 @@ import com.zhihu.matisse.internal.entity.CaptureStrategy;
 import com.zhihu.matisse.internal.entity.SelectionSpec;
 import com.zhihu.matisse.listener.OnCheckedListener;
 import com.zhihu.matisse.listener.OnSelectedListener;
-import com.zhihu.matisse.ui.MatisseActivity;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -63,7 +63,7 @@ import static android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT;
 public final class SelectionCreator {
     private final Matisse mMatisse;
     private final SelectionSpec mSelectionSpec;
-
+    private ActivityResultLauncher<Integer> mActivityResult;
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     @IntDef({
             SCREEN_ORIENTATION_UNSPECIFIED,
@@ -354,14 +354,24 @@ public final class SelectionCreator {
             return;
         }
 
-        Intent intent = new Intent(activity, MatisseActivity.class);
+        ActivityResultLauncher<Integer> mIntegerActivityResultLauncher  =mMatisse.getmActivityResultLauncher();
+        if(mIntegerActivityResultLauncher != null)
+            mIntegerActivityResultLauncher.launch(requestCode);
 
-        Fragment fragment = mMatisse.getFragment();
-        if (fragment != null) {
-            fragment.startActivityForResult(intent, requestCode);
-        } else {
-            activity.startActivityForResult(intent, requestCode);
-        }
+//        Intent intent = new Intent(activity, MatisseActivity.class);
+
+//        Fragment fragment = mMatisse.getFragment();
+//        if (fragment != null) {
+//            mMatisse.getmActivityResultLauncher()
+//            mActivityResult.launch(requestCode);
+//            //fragment.startActivityForResult(intent, requestCode);
+//        } else {
+//            mActivityResult = ((AppCompatActivity)activity).registerForActivityResult(new PickImage(activity),activityResult);
+//            mActivityResult.launch(requestCode);
+////            activityResult.launch(activityResult);
+//            //activity.startActivityForResult(intent, requestCode);
+//        }
+
     }
 
     public SelectionCreator showPreview(boolean showPreview) {

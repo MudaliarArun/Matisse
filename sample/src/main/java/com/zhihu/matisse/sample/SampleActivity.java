@@ -28,6 +28,9 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -39,15 +42,16 @@ import com.zhihu.matisse.engine.impl.GlideEngine;
 import com.zhihu.matisse.engine.impl.PicassoEngine;
 import com.zhihu.matisse.filter.Filter;
 import com.zhihu.matisse.internal.entity.CaptureStrategy;
+import com.zhihu.matisse.internal.utils.PickImage;
 
 import java.util.List;
 
 public class SampleActivity extends AppCompatActivity implements View.OnClickListener {
 
-    private static final int REQUEST_CODE_CHOOSE = 23;
 
     private UriAdapter mAdapter;
-
+    private ActivityResultCallback<ActivityResult> callback;
+    private ActivityResultLauncher<Integer> mIntegerActivityResultLauncher;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,6 +63,7 @@ public class SampleActivity extends AppCompatActivity implements View.OnClickLis
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.recyclerview);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(mAdapter = new UriAdapter());
+        onImageResult();
     }
 
     // <editor-fold defaultstate="collapsed" desc="onClick">
@@ -81,7 +86,7 @@ public class SampleActivity extends AppCompatActivity implements View.OnClickLis
     private void startAction(View v) {
         switch (v.getId()) {
             case R.id.zhihu:
-                Matisse.from(SampleActivity.this)
+                Matisse.from(SampleActivity.this,mIntegerActivityResultLauncher)
                         .choose(MimeType.ofImage(), false)
                         .countable(true)
                         .capture(true)
@@ -104,10 +109,10 @@ public class SampleActivity extends AppCompatActivity implements View.OnClickLis
                         .setOnCheckedListener(isChecked -> {
                             Log.e("isChecked", "onCheck: isChecked=" + isChecked);
                         })
-                        .forResult(REQUEST_CODE_CHOOSE);
+                        .forResult(PickImage.PICK_GALLERY_IMAGE);
                 break;
             case R.id.dracula:
-                Matisse.from(SampleActivity.this)
+                Matisse.from(SampleActivity.this,mIntegerActivityResultLauncher)
                         .choose(MimeType.ofImage())
                         .theme(R.style.Matisse_Dracula)
                         .countable(false)
@@ -116,10 +121,10 @@ public class SampleActivity extends AppCompatActivity implements View.OnClickLis
                         .originalEnable(true)
                         .maxOriginalSize(10)
                         .imageEngine(new PicassoEngine())
-                        .forResult(REQUEST_CODE_CHOOSE);
+                        .forResult(PickImage.PICK_GALLERY_IMAGE);
                 break;
             case R.id.only_gif:
-                Matisse.from(SampleActivity.this)
+                Matisse.from(SampleActivity.this,mIntegerActivityResultLauncher)
                         .choose(MimeType.of(MimeType.GIF), false)
                         .countable(true)
                         .maxSelectable(9)
@@ -133,7 +138,7 @@ public class SampleActivity extends AppCompatActivity implements View.OnClickLis
                         .originalEnable(true)
                         .maxOriginalSize(10)
                         .autoHideToolbarOnSingleTap(true)
-                        .forResult(REQUEST_CODE_CHOOSE);
+                        .forResult(PickImage.PICK_GALLERY_IMAGE);
                 break;
             default:
                 break;
@@ -144,7 +149,7 @@ public class SampleActivity extends AppCompatActivity implements View.OnClickLis
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_CHOOSE && resultCode == RESULT_OK) {
+        if (requestCode == PickImage.PICK_GALLERY_IMAGE && resultCode == RESULT_OK) {
             mAdapter.setData(Matisse.obtainResult(data), Matisse.obtainPathResult(data));
             Log.e("OnActivityResult ", String.valueOf(Matisse.obtainOriginalState(data)));
         }
@@ -192,6 +197,20 @@ public class SampleActivity extends AppCompatActivity implements View.OnClickLis
                 mPath = (TextView) contentView.findViewById(R.id.path);
             }
         }
+    }
+
+    private void onImageResult(){
+
+        callback = new ActivityResultCallback<ActivityResult>() {
+            @Override
+            public void onActivityResult(ActivityResult result) {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    mAdapter.setData(Matisse.obtainResult(result.getData()), Matisse.obtainPathResult(result.getData()));
+                    Log.e("OnActivityResult ", String.valueOf(Matisse.obtainOriginalState(result.getData())));
+                }
+            }
+        };
+        mIntegerActivityResultLauncher = registerForActivityResult(new PickImage(this),callback);
     }
 
 }

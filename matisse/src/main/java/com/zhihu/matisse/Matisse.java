@@ -18,6 +18,8 @@ package com.zhihu.matisse;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
+
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
@@ -34,18 +36,23 @@ public final class Matisse {
 
     private final WeakReference<Activity> mContext;
     private final WeakReference<Fragment> mFragment;
-
-    private Matisse(Activity activity) {
-        this(activity, null);
+    private final WeakReference<ActivityResultLauncher<Integer>> mActivityResultLauncher;
+    private Matisse(Activity activity,ActivityResultLauncher<Integer> mActivityResultLauncher) {
+        this(activity, null, mActivityResultLauncher);
     }
 
-    private Matisse(Fragment fragment) {
-        this(fragment.getActivity(), fragment);
+    private Matisse(Fragment fragment,ActivityResultLauncher<Integer> mActivityResultLauncher) {
+        this(fragment.getActivity(), fragment,mActivityResultLauncher);
     }
 
-    private Matisse(Activity activity, Fragment fragment) {
+//    private Matisse(Activity activity, Fragment fragment) {
+//        mContext = new WeakReference<>(activity);
+//        mFragment = new WeakReference<>(fragment);
+//    }
+    private Matisse(Activity activity, Fragment fragment,ActivityResultLauncher<Integer> mActivityResultLauncher) {
         mContext = new WeakReference<>(activity);
         mFragment = new WeakReference<>(fragment);
+        this.mActivityResultLauncher = new WeakReference<>(mActivityResultLauncher);
     }
 
     /**
@@ -57,8 +64,8 @@ public final class Matisse {
      * @param activity Activity instance.
      * @return Matisse instance.
      */
-    public static Matisse from(Activity activity) {
-        return new Matisse(activity);
+    public static Matisse from(Activity activity,ActivityResultLauncher<Integer> mActivityResult) {
+        return new Matisse(activity,mActivityResult);
     }
 
     /**
@@ -70,8 +77,8 @@ public final class Matisse {
      * @param fragment Fragment instance.
      * @return Matisse instance.
      */
-    public static Matisse from(Fragment fragment) {
-        return new Matisse(fragment);
+    public static Matisse from(Fragment fragment,ActivityResultLauncher<Integer> mActivityResult) {
+        return new Matisse(fragment,mActivityResult);
     }
 
     /**
@@ -148,4 +155,8 @@ public final class Matisse {
         return mFragment != null ? mFragment.get() : null;
     }
 
+    @Nullable
+    public ActivityResultLauncher<Integer> getmActivityResultLauncher() {
+        return mActivityResultLauncher != null ? mActivityResultLauncher.get() : null;
+    }
 }
