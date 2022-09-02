@@ -23,12 +23,20 @@ import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.MediaStore;
+import android.widget.Toast;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.core.content.FileProvider;
 import androidx.core.os.EnvironmentCompat;
 
 import com.zhihu.matisse.internal.entity.CaptureStrategy;
+import com.zhihu.matisse.ui.MatisseActivity;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,7 +79,7 @@ public class MediaStoreCompat {
         mCaptureStrategy = strategy;
     }
 
-    public void dispatchCaptureIntent(Context context, int requestCode) {
+    public void dispatchCaptureIntent(Context context, int requestCode,ActivityResultCallback<ActivityResult>  activityResultActivityResultCallback) {
         Intent captureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (captureIntent.resolveActivity(context.getPackageManager()) != null) {
             File photoFile = null;
@@ -96,13 +104,40 @@ public class MediaStoreCompat {
                                 Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     }
                 }
-                if (mFragment != null) {
-                    mFragment.get().startActivityForResult(captureIntent, requestCode);
-                } else {
-                    mContext.get().startActivityForResult(captureIntent, requestCode);
-                }
+                ((MatisseActivity)context).onSetCodeCaptureIntentLaunch(captureIntent,requestCode);
+
+//                if (mFragment != null) {
+//
+//                   final ActivityResultLauncher<Integer> str =  mFragment.get().registerForActivityResult(new PickImage(mFragment.get().getContext(),captureIntent),activityResultActivityResultCallback);
+//
+//                    new Handler().postDelayed(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            str.launch(requestCode);
+//                        }
+//                    },20);
+//                    //mFragment.get().startActivityForResult(captureIntent, requestCode);
+//                } else {
+//                    try {
+//                        AppCompatActivity activity = (AppCompatActivity) mContext.get();
+//                        final ActivityResultLauncher<Integer> str =  activity.registerForActivityResult(new PickImage(activity,captureIntent),activityResultActivityResultCallback);
+//                        new Handler().postDelayed(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                str.launch(requestCode);
+//                            }
+//                        },20);
+//                    }catch (Exception e){
+//                        Toast.makeText(mContext.get(), "Unsupported Activity",Toast.LENGTH_LONG).show();
+//                    }
+//                    //mContext.get().startActivityForResult(captureIntent, requestCode);
+//                }
             }
         }
+    }
+
+    private void localActivityResult(int resultCode, int requestCode, Intent data) {
+
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")

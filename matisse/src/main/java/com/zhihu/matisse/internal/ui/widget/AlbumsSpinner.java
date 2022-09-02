@@ -38,6 +38,7 @@ public class AlbumsSpinner {
     private TextView mSelected;
     private ListPopupWindow mListPopupWindow;
     private AdapterView.OnItemSelectedListener mOnItemSelectedListener;
+    private boolean isEnabled;
 
     public AlbumsSpinner(@NonNull Context context) {
         mListPopupWindow = new ListPopupWindow(context, null, R.attr.listPopupWindowStyle);
@@ -116,7 +117,8 @@ public class AlbumsSpinner {
                 mListPopupWindow.setHeight(
                         mAdapter.getCount() > MAX_SHOWN_COUNT ? itemHeight * MAX_SHOWN_COUNT
                                 : itemHeight * mAdapter.getCount());
-                mListPopupWindow.show();
+                if(isEnabled())
+                    mListPopupWindow.show();
             }
         });
         mSelected.setOnTouchListener(mListPopupWindow.createDragToOpenListener(mSelected));
@@ -126,4 +128,12 @@ public class AlbumsSpinner {
         mListPopupWindow.setAnchorView(view);
     }
 
+
+    public void setEnabled(boolean enabled) {
+        isEnabled = enabled;
+    }
+
+    public boolean isEnabled() {
+        return isEnabled;
+    }
 }

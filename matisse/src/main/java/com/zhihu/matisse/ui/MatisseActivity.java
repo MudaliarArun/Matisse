@@ -16,6 +16,7 @@
 package com.zhihu.matisse.ui;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.TypedArray;
 import android.database.Cursor;
@@ -26,6 +27,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.ActivityResultRegistry;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.appcompat.app.ActionBar;
@@ -58,7 +65,10 @@ import com.zhihu.matisse.internal.utils.MediaStoreCompat;
 import com.zhihu.matisse.internal.utils.PathUtils;
 import com.zhihu.matisse.internal.utils.PhotoMetadataUtils;
 
+import com.zhihu.matisse.internal.utils.PickImage;
 import com.zhihu.matisse.internal.utils.SingleMediaScanner;
+import com.zhihu.matisse.listener.IPickImageIntentRequest;
+
 import java.util.ArrayList;
 
 /**
@@ -69,7 +79,7 @@ public class MatisseActivity extends AppCompatActivity implements
         AlbumCollection.AlbumCallbacks, AdapterView.OnItemSelectedListener,
         MediaSelectionFragment.SelectionProvider, View.OnClickListener,
         AlbumMediaAdapter.CheckStateListener, AlbumMediaAdapter.OnMediaClickListener,
-        AlbumMediaAdapter.OnPhotoCapture {
+        AlbumMediaAdapter.OnPhotoCapture, IPickImageIntentRequest {
 
     public static final String EXTRA_RESULT_SELECTION = "extra_result_selection";
     public static final String EXTRA_RESULT_SELECTION_PATH = "extra_result_selection_path";
@@ -92,6 +102,9 @@ public class MatisseActivity extends AppCompatActivity implements
     private LinearLayout mOriginalLayout;
     private CheckRadioView mOriginal;
     private boolean mOriginalEnable;
+    private ActivityResultLauncher<Integer> mCodePreviewActivityResultLauncher;
+    private Intent intentRequestCodePreview;
+    private Intent intentRequestCodeCapture;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -144,15 +157,18 @@ public class MatisseActivity extends AppCompatActivity implements
         }
         updateBottomToolbar();
 
-        mAlbumsAdapter = new AlbumsAdapter(this, null, false);
+        mAlbumsAdapter = new AlbumsAdapter(this, null, true);
         mAlbumsSpinner = new AlbumsSpinner(this);
         mAlbumsSpinner.setOnItemSelectedListener(this);
         mAlbumsSpinner.setSelectedTextView((TextView) findViewById(R.id.selected_album));
         mAlbumsSpinner.setPopupAnchorView(findViewById(R.id.toolbar));
         mAlbumsSpinner.setAdapter(mAlbumsAdapter);
+        mAlbumsSpinner.setEnabled(true);
+
         mAlbumCollection.onCreate(this, this);
         mAlbumCollection.onRestoreInstanceState(savedInstanceState);
         mAlbumCollection.loadAlbums();
+        registerForResult();
     }
 
     @Override
@@ -189,6 +205,9 @@ public class MatisseActivity extends AppCompatActivity implements
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        localActivityResult(requestCode,resultCode,data);
+    }
+    private void localActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode != RESULT_OK)
             return;
 
@@ -312,10 +331,12 @@ public class MatisseActivity extends AppCompatActivity implements
     @Override
     public void onClick(View v) {
         if (v.getId() == R.id.button_preview) {
-            Intent intent = new Intent(this, SelectedPreviewActivity.class);
-            intent.putExtra(BasePreviewActivity.EXTRA_DEFAULT_BUNDLE, mSelectedCollection.getDataWithBundle());
-            intent.putExtra(BasePreviewActivity.EXTRA_RESULT_ORIGINAL_ENABLE, mOriginalEnable);
-            startActivityForResult(intent, REQUEST_CODE_PREVIEW);
+            intentRequestCodePreview = new Intent(this, SelectedPreviewActivity.class);
+            intentRequestCodePreview.putExtra(BasePreviewActivity.EXTRA_DEFAULT_BUNDLE, mSelectedCollection.getDataWithBundle());
+            intentRequestCodePreview.putExtra(BasePreviewActivity.EXTRA_RESULT_ORIGINAL_ENABLE, mOriginalEnable);
+            mCodePreviewActivityResultLauncher.launch(REQUEST_CODE_PREVIEW);
+
+            //startActivityForResult(intent, REQUEST_CODE_PREVIEW);
         } else if (v.getId() == R.id.button_apply) {
             Intent result = new Intent();
             ArrayList<Uri> selectedUris = (ArrayList<Uri>) mSelectedCollection.asListOfUri();
@@ -414,12 +435,13 @@ public class MatisseActivity extends AppCompatActivity implements
 
     @Override
     public void onMediaClick(Album album, Item item, int adapterPosition) {
-        Intent intent = new Intent(this, AlbumPreviewActivity.class);
-        intent.putExtra(AlbumPreviewActivity.EXTRA_ALBUM, album);
-        intent.putExtra(AlbumPreviewActivity.EXTRA_ITEM, item);
-        intent.putExtra(BasePreviewActivity.EXTRA_DEFAULT_BUNDLE, mSelectedCollection.getDataWithBundle());
-        intent.putExtra(BasePreviewActivity.EXTRA_RESULT_ORIGINAL_ENABLE, mOriginalEnable);
-        startActivityForResult(intent, REQUEST_CODE_PREVIEW);
+        intentRequestCodePreview = new Intent(this, AlbumPreviewActivity.class);
+        intentRequestCodePreview.putExtra(AlbumPreviewActivity.EXTRA_ALBUM, album);
+        intentRequestCodePreview.putExtra(AlbumPreviewActivity.EXTRA_ITEM, item);
+        intentRequestCodePreview.putExtra(BasePreviewActivity.EXTRA_DEFAULT_BUNDLE, mSelectedCollection.getDataWithBundle());
+        intentRequestCodePreview.putExtra(BasePreviewActivity.EXTRA_RESULT_ORIGINAL_ENABLE, mOriginalEnable);
+        mCodePreviewActivityResultLauncher.launch(REQUEST_CODE_PREVIEW);
+
     }
 
     @Override
@@ -430,8 +452,40 @@ public class MatisseActivity extends AppCompatActivity implements
     @Override
     public void capture() {
         if (mMediaStoreCompat != null) {
-            mMediaStoreCompat.dispatchCaptureIntent(this, REQUEST_CODE_CAPTURE);
+            mMediaStoreCompat.dispatchCaptureIntent(this, REQUEST_CODE_CAPTURE, new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    localActivityResult(result.getResultCode(),REQUEST_CODE_CAPTURE,result.getData());
+                }
+            });
         }
+    }
+    public void registerForResult(){
+        mCodePreviewActivityResultLauncher =  registerForActivityResult(new PickImage(MatisseActivity.this, this), new ActivityResultCallback<ActivityResult>() {
+            @Override
+            public void onActivityResult(ActivityResult result) {
+                localActivityResult(REQUEST_CODE_PREVIEW,result.getResultCode(),result.getData());
+            }
+        });
+        //mCodePreviewActivityResultLauncher.launch(REQUEST_CODE_PREVIEW);
+    }
+
+    public void onSetCodeCaptureIntentLaunch(Intent intent,int requestCode){
+        this.intentRequestCodeCapture = intent;
+        mCodePreviewActivityResultLauncher.launch(requestCode);
+    }
+    @Override
+    public Intent createIntent(@NonNull Context context, @NonNull Integer pickType) {
+        switch (pickType){
+            case REQUEST_CODE_PREVIEW:
+                return intentRequestCodePreview;
+            case REQUEST_CODE_CAPTURE:
+                return intentRequestCodeCapture;
+            default:
+
+                break;
+        }
+        return null;
     }
 
 }

@@ -16,8 +16,12 @@
  */
 package com.zhihu.matisse;
 
+import static android.media.MediaFormat.MIMETYPE_IMAGE_ANDROID_HEIC;
+
 import android.content.ContentResolver;
 import android.net.Uri;
+import android.os.Build;
+import android.system.Os;
 import android.text.TextUtils;
 
 import androidx.collection.ArraySet;
@@ -90,6 +94,9 @@ public enum MimeType {
     )),
     AVI("video/avi", arraySetOf(
             "avi"
+    )),
+    HEIC("image/vnd.android.heic",arraySetOf(
+            "heic"
     ));
 
     private final String mMimeTypeName;
@@ -109,7 +116,11 @@ public enum MimeType {
     }
 
     public static Set<MimeType> ofImage() {
-        return EnumSet.of(JPEG, PNG, GIF, BMP, WEBP);
+        if(Build.VERSION.SDK_INT > Build.VERSION_CODES.P ){
+            return EnumSet.of(JPEG, PNG, GIF, BMP, WEBP,HEIC);
+        }else {
+            return EnumSet.of(JPEG, PNG, GIF, BMP, WEBP);
+        }
     }
 
     public static Set<MimeType> ofImage(boolean onlyGif) {

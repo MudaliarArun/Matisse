@@ -92,6 +92,6 @@ public class AlbumPreviewActivity extends BasePreviewActivity implements
 
     @Override
     public void onAlbumMediaReset() {
-
+        System.out.println("reset");
     }
 }
